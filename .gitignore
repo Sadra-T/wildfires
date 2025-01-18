@@ -1,0 +1,9 @@
+# Node modules
+node_modules
+
+# Logs
+*.log
+
+# OS/Editor-specific
+.DS_Store
+.vscode
