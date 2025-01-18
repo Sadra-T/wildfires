@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const { generateMockWildfire } = require("./mockDataGenerator");
 const SolaceClient = require("../config/solace");
-require("dotenv").config();
+require("dotenv").config({ path: './src/.env' });
 
 const app = express();
 app.use(cors());
@@ -21,38 +21,19 @@ const solaceClient = new SolaceClient({
 
 // Simulate different types of events
 const simulateEvents = () => {
-  // 1. New Wildfire Detection
-  setInterval(() => {
-    const newWildfire = generateMockWildfire();
-    wildfireData.push(newWildfire);
-    solaceClient.publish("wildfires/new", newWildfire);
-    console.log("New wildfire detected:", newWildfire.region);
+  setInterval(async () => {
+    const { added: newWildfire, removed: removedWildfire } = await fetchAndCompareFireData();
+
+    if (newWildfire && newWildfire.length > 0) {
+      wildfireData.push(...newWildfire);
+      solaceClient.publish("wildfires/new", JSON.stringify(newWildfire));
+    }
+
+    if (removedWildfire && removedWildfire.length > 0) {
+      wildfireData.push(...removedWildfire);
+      solaceClient.publish("wildfires/removed", JSON.stringify(removedWildfire));
+    }
   }, 5000);
-
-  // 2. Temperature Updates
-  setInterval(() => {
-    if (wildfireData.length > 0) {
-      const index = Math.floor(Math.random() * wildfireData.length);
-      wildfireData[index].bright_ti4 += (Math.random() - 0.5) * 10;
-      solaceClient.publish("wildfires/temperature-update", wildfireData[index]);
-      console.log("Temperature update:", wildfireData[index].region);
-    }
-  }, 3000);
-
-  // 3. Containment Updates
-  setInterval(() => {
-    if (wildfireData.length > 0) {
-      const index = Math.floor(Math.random() * wildfireData.length);
-      const containmentStatus = {
-        id: wildfireData[index].id,
-        region: wildfireData[index].region,
-        containment: Math.floor(Math.random() * 100),
-        timestamp: new Date().toISOString(),
-      };
-      solaceClient.publish("wildfires/containment", containmentStatus);
-      console.log("Containment update:", containmentStatus.region);
-    }
-  }, 7000);
 };
 
 // API Endpoints
@@ -89,12 +70,12 @@ process.on("SIGTERM", () => {
 
 // src/index.js
 
-const cron = require('node-cron');
-const { fetchAndCompareFireData } = require('./fetchFires');
+const cron = require("node-cron");
+const { fetchAndCompareFireData } = require("./fetchFires");
 
 // Example: run once a day at 00:00 (midnight)
-cron.schedule('0 0 * * *', () => {
-  console.log('Running daily fire data fetch...');
+cron.schedule("0 0 * * *", () => {
+  console.log("Running daily fire data fetch...");
   fetchAndCompareFireData();
 });
 
