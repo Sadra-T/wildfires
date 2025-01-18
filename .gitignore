@@ -7,3 +7,5 @@ node_modules
 # OS/Editor-specific
 .DS_Store
 .vscode
+ 
+src/*.json

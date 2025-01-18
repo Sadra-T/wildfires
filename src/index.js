@@ -30,3 +30,17 @@ app.get('/wildfires/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
+// src/index.js
+
+const cron = require('node-cron');
+const { fetchAndCompareFireData } = require('./fetchFires');
+
+// Example: run once a day at 00:00 (midnight)
+cron.schedule('0 0 * * *', () => {
+  console.log('Running daily fire data fetch...');
+  fetchAndCompareFireData();
+});
+
+// Alternatively, just call the function directly for testing:
+fetchAndCompareFireData();
