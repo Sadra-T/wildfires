@@ -12,6 +12,9 @@ const csv = require('csvtojson');
  */
 async function fetchAndCompareFireData() {
   try {
+    let added = [];
+    let removed = [];
+
     // 1) Determine today's date in "YYYY-MM-DD" format
     const todayStr = new Date().toISOString().split('T')[0];
 
@@ -66,10 +69,10 @@ async function fetchAndCompareFireData() {
       const newKeys = new Set(newData.map(makeKey));
 
       // 8a) Find newly added objects
-      const added = newData.filter((obj) => !oldKeys.has(makeKey(obj)));
+      added = newData.filter((obj) => !oldKeys.has(makeKey(obj)));
 
       // 8b) Find objects removed compared to yesterday
-      const removed = oldData.filter((obj) => !newKeys.has(makeKey(obj)));
+      removed = oldData.filter((obj) => !newKeys.has(makeKey(obj)));
 
       console.log('[fetchFires] Added objects:', added.length, 'entries');
       console.log('[fetchFires] Removed objects:', removed.length, 'entries');
@@ -79,6 +82,7 @@ async function fetchAndCompareFireData() {
       // You can do more with these arrays (e.g., store in a DB, write to separate files, etc.)
     } else {
       console.log(`[fetchFires] No file found for yesterday (${yesterdayStr}). Skipping comparison.`);
+      return { added, removed };
     }
   } catch (error) {
     console.error('[fetchFires] Error:', error.message);

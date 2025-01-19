@@ -2,7 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const { generateMockWildfire } = require("./mockDataGenerator");
 const SolaceClient = require("../config/solace");
-require("dotenv").config({ path: './src/.env' });
+require("dotenv").config({ path: "./src/.env" });
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 app.use(cors());
@@ -19,19 +21,33 @@ const solaceClient = new SolaceClient({
   password: process.env.SOLACE_PASSWORD,
 });
 
+const todayStr = new Date().toISOString().split("T")[0];
+const todayFilename = `fires_${todayStr}.json`;
+const todayFilePath = path.join(__dirname, todayFilename);
+const todayDataString = fs.readFileSync(todayFilePath, "utf-8");
+wildfireData = JSON.parse(todayDataString);
+
 // Simulate different types of events
 const simulateEvents = () => {
   setInterval(async () => {
-    const { added: newWildfire, removed: removedWildfire } = await fetchAndCompareFireData();
+    const fetchedData = await fetchAndCompareFireData();
 
-    if (newWildfire && newWildfire.length > 0) {
-      wildfireData.push(...newWildfire);
-      solaceClient.publish("wildfires/new", JSON.stringify(newWildfire));
-    }
+    if (fetchedData) {
+      const { added: newWildfire, removed: removedWildfire } =
+        await fetchAndCompareFireData();
 
-    if (removedWildfire && removedWildfire.length > 0) {
-      wildfireData.push(...removedWildfire);
-      solaceClient.publish("wildfires/removed", JSON.stringify(removedWildfire));
+      if (newWildfire && newWildfire.length > 0) {
+        wildfireData.push(...newWildfire);
+        solaceClient.publish("wildfires/new", JSON.stringify(newWildfire));
+      }
+
+      if (removedWildfire && removedWildfire.length > 0) {
+        wildfireData.push(...removedWildfire);
+        solaceClient.publish(
+          "wildfires/removed",
+          JSON.stringify(removedWildfire)
+        );
+      }
     }
   }, 5000);
 };
