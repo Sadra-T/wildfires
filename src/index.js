@@ -24,8 +24,14 @@ const solaceClient = new SolaceClient({
 const todayStr = new Date().toISOString().split("T")[0];
 const todayFilename = `fires_${todayStr}.json`;
 const todayFilePath = path.join(__dirname, todayFilename);
-const todayDataString = fs.readFileSync(todayFilePath, "utf-8");
-wildfireData = JSON.parse(todayDataString);
+if (fs.existsSync(todayFilePath)) {
+  const todayDataString = fs.readFileSync(todayFilePath, "utf-8");
+  wildfireData = JSON.parse(todayDataString);
+} else {
+  console.error(`File not found: ${todayFilePath}`);
+  wildfireData = []; // or handle the error as needed
+}
+
 
 // Simulate different types of events
 const simulateEvents = () => {
@@ -53,7 +59,21 @@ const simulateEvents = () => {
 };
 
 // API Endpoints
-app.get("/wildfires", (req, res) => {
+app.get("/wildfires", async (req, res) => {
+  const NASA_FIRMS_CSV_URL = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/bd91f1ecea0341e4fc5fb608ce522582/MODIS_NRT/world/1/${todayStr}`;
+
+  const response = await axios.get(NASA_FIRMS_CSV_URL);
+  const csvData = response.data; // This is the raw CSV string
+
+  const allFieldsJson = await csv().fromString(csvData);
+  newData = allFieldsJson.map((item) => ({
+    latitude: item.latitude,
+    longitude: item.longitude,
+    bright_ti4: item.brightness,
+  }));
+
+  fs.writeFileSync(todayFilePath, JSON.stringify(newData, null, 2), "utf-8");
+  console.log(`\n[fetchFires] Saved today's data to ${todayFilename}`);
   res.json(wildfireData);
 });
 
